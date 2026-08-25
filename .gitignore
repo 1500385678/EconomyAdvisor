@@ -3,3 +3,19 @@
 node_modules/
 .venv/
 __pycache__/
+
+# EconomyIngest SQLite(运行时产物,不入库)
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# Python 编译产物
+*.pyc
+*.pyo
+*.pyd
+
+# 虚拟环境
+.env
+.venv/
+venv/
