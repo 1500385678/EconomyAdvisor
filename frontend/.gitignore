@@ -1,6 +1,9 @@
 # dependencies
 node_modules/
 
+# 项目以 package.json 为单一来源(见 README §1),不锁版本
+package-lock.json
+
 # next.js
 .next/
 out/
