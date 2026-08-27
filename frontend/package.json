@@ -1,0 +1,26 @@
+{
+  "name": "economy-advisor-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EconomyAdvisor · Next.js 14 (App Router) 最小骨架,5 指标看板",
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "11.3.0",
+    "next": "14.2.15",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.11",
+    "@types/node": "20.16.10",
+    "@types/react": "18.3.11",
+    "@types/react-dom": "18.3.0",
+    "typescript": "5.6.2"
+  }
+}

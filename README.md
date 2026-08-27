@@ -28,12 +28,37 @@ EconomyWeb/
 │       ├── economy_ingest.py              # SQLite schema + 5 指标数据契约
 │       ├── probe_akshare_5indicators.py   # probe CLI(akshare 不可用时 mock 落库)
 │       └── README.md                      # 使用说明 + 后续 §5-2 Day 1-5 任务分解
+├── frontend/                  # §5-2 Day 4 · Phase 1 MVP 启动基线 v2(2026-08-28)
+│   ├── app/                                # Next.js 14 App Router(1 主页 + 1 API)
+│   │   ├── page.tsx
+│   │   ├── layout.tsx
+│   │   ├── globals.css
+│   │   └── api/indicators/route.ts
+│   ├── lib/db.ts                           # better-sqlite3 单例 + 指标卡片数据接口
+│   ├── package.json / tsconfig.json / next.config.js / .gitignore
+│   └── README.md                           # 使用说明 + 与 backend/ingest 接口契约
 ├── docs/                      # 阶段性调研文档
 │   └── phase-0-data-source-catalog-v0.1.md
 ├── .plan/                     # 每日 dev plan(消费后清理)
 ├── Logs/                      # 每日巡检报告
 └── data/                      # EconomyIngest SQLite 落库(运行时产物,不入 git)
 ```
+
+## Phase 1 MVP 启动基线 v2(2026-08-28 起)
+
+frontend/ 最小骨架(Next.js 14 + better-sqlite3)与 backend/ingest/(Python + SQLite)形成最小可运行栈:
+
+```bash
+# 1) 落库
+python3 backend/ingest/probe_akshare_5indicators.py --db data/economy_ingest.db
+# 2) 启前端
+cd frontend && npm install && npm run dev
+# 浏览器打开 http://localhost:3001
+```
+
+- frontend 详细使用见 [`frontend/README.md`](frontend/README.md)
+- backend 详细使用见 [`backend/ingest/README.md`](backend/ingest/README.md)
+- 端口 3001 避开已有 Next.js 项目占用
 
 ## 跑通 probe(§5-2 起步基线)
 
