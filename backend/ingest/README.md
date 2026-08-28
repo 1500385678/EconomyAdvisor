@@ -16,6 +16,8 @@ updated: 2026-08-27
 
 - 起步(2026-08-26):固化 EconomyIngest SQLite schema + 5 核心指标数据契约 + probe 入口
 - 解析层(2026-08-27):`INDICATOR_AKSHARE_SCHEMA` 列名映射 + `parse_akshare_df` + `self_test_parse`,等 akshare 装上即用
+- frontend 最小骨架(2026-08-28):Next.js 14 + better-sqlite3 起步,与本模块形成最小可运行栈
+- 依赖锁(2026-08-29):新增 `requirements.txt` 锁 akshare + pandas + openpyxl,绕过 pip 21.2 + Python 3.9 下 xlrd 冲突,§5-2 Day 2 真实拉取的装包前置
 - 真实 akshare 接入:§5-2 Day 2-3(本周末)
 - 5 源端到端:§5-2 Day 5(2026-08-30)
 
@@ -113,6 +115,38 @@ print(count_values("data/economy_ingest.db"))
 
 - 当前用 `source_raw='mock'` 的 5 条最新期数据,**数值参考 Daily/20-经济-Economy-日报-20260823/24.md**;akshare 真实接入时这 5 条会被覆盖
 
+### 5.4 真实拉取依赖锁(§5-2 Day 2 · 2026-08-29)
+
+新增 `requirements.txt` 锁住 akshare 真实拉取链路需要的包,作为本周末 §5-2 Day 2 装包前置。
+
+**装包路径(规避 pip 21.2 + Python 3.9 下 xlrd 冲突)**
+
+```bash
+cd /Users/aaron/Mac/Consultant/20-经济-Economy/_EconomyLib/EconomyWeb
+python3 -m pip install --upgrade pip          # 21.2 → 23+,绕 PEP 517 resolver 限制
+python3 -m pip install -r backend/ingest/requirements.txt
+```
+
+**装包后验证**
+
+```bash
+python3 -c "import akshare as ak; print(ak.__version__)"   # 期望 >= 1.13.0
+python3 backend/ingest/probe_akshare_5indicators.py --self-test
+python3 backend/ingest/probe_akshare_5indicators.py --db data/economy_ingest.db
+```
+
+期望:5 指标全部 `source_raw='akshare'`,而非 `mock`;若仍走 mock,stderr 会打印具体原因(网络 / 包版本 / 字段不匹配)。
+
+**冲突备选**
+
+- 仍报 `xlrd` 相关错:临时 `pip install xlrd==2.0.1`(xlrd 2.0+ 仅读 xlsx,跳过 xls)
+- 仍报 pandas 与 numpy 2.0 ABI 不兼容:临时 `pip install pandas==1.5.3 numpy<2`(回退 1.x)
+
+**与 §5-2 Day 5(2026-08-30 5 源端到端)的衔接**
+
+- 本节只覆盖 akshare(NBS + PBOC 前 4 指标),PBOC 公开市场操作(Day 2)与 NBS 直抓降级(Day 3)的额外依赖另列
+- 完整 5 源依赖清单(akshare + beautifulsoup4 + pdfplumber + lxml)将在 Day 5 前合并到 requirements.txt 末尾,本节只先固化 akshare 段
+
 ## 6. 关联文档
 
 - `项目开发计划.md §5-2` 跑通 5 大免费宏观数据源
@@ -167,3 +201,4 @@ python3 backend/ingest/probe_akshare_5indicators.py --self-test
 |---|---|---|
 | 2026-08-26 03:15 | 起步:EconomyIngest schema + 5 指标字典 + probe CLI(akshare 不可用时 mock 落库) | 每日 03:10 cron · 项目开发计划 §5-2 起步 |
 | 2026-08-27 03:15 | §5-2 Day 1:`INDICATOR_AKSHARE_SCHEMA` + `parse_akshare_df` + `self_test_parse` + 5 指标解析 PASS;`_fetch_via_akshare` 接入 parse,拉取成功不再强制走 mock 降级 | 每日 03:10 cron · 项目开发计划 §5-2 第 1 步推进 |
+| 2026-08-29 03:10 | §5-2 Day 2 依赖锁:新增 `requirements.txt` 锁 akshare 1.13+ / pandas / openpyxl,绕开 pip 21.2 + Python 3.9 下 xlrd 冲突;README §5.4 给出装包路径 + 验证命令 + 冲突备选 | 每日 03:10 cron · 项目开发计划 §5-2 第 2 步前置 |

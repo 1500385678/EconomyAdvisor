@@ -1,0 +1,34 @@
+# EconomyIngest akshare 真实拉取依赖清单
+# 对应 项目开发计划.md §5-2 Day 2 · 2026-08-29
+#
+# 装包路径(规避 pip 21.2 + Python 3.9 下 xlrd 冲突):
+#   1) python3 -m pip install --upgrade pip        # 升 pip 21.2 → 23+,解决 resolver 限制
+#   2) python3 -m pip install -r requirements.txt  # 装本清单
+#
+# 装包后验证(2026-08-29 起):
+#   python3 -c "import akshare as ak; print(ak.__version__)"  # 期望 >= 1.13.0
+#   python3 backend/ingest/probe_akshare_5indicators.py --self-test
+#   python3 backend/ingest/probe_akshare_5indicators.py --db data/economy_ingest.db
+# 期望 5 指标 source_raw='akshare'(而非 'mock')
+#
+# 已知冲突
+# --------
+# - akshare 1.12.x 在 pip 21.2 + Python 3.9 下因 xlrd 1.2.0 触发 PEP 517 构建失败(2026-08-26 验证)
+# - 解决:先升级 pip,新版 akshare 1.13+ 已切到 openpyxl 解析 Excel,不强依赖 xlrd
+# - 备选:若仍冲突,临时 `pip install xlrd==2.0.1`(xlrd 2.0+ 仅读 xlsx,跳过 xls)
+#
+# 与 economy_ingest.py / probe_akshare_5indicators.py 的关系
+# ---------------------------------------------------------
+# - economy_ingest.py:stdlib only,**不依赖**本清单(任何环境先跑通 schema + mock)
+# - probe_akshare_5indicators.py:akshare 不可用时降级 mock,装了本清单即走真实拉取
+
+# 数据拉取(akshare 核心)
+akshare>=1.13.0
+pandas>=1.5.0
+requests>=2.28.0
+
+# Excel 解析(akshare 1.13+ 主要走 openpyxl)
+openpyxl>=3.1.0
+
+# 进度条(akshare 部分接口内部使用,装了不报缺包)
+tqdm>=4.64.0
