@@ -1,8 +1,12 @@
 .DS_Store
+**/.DS_Store
 *.log
 node_modules/
 .venv/
 __pycache__/
+
+# TypeScript 增量编译缓存
+**/tsconfig.tsbuildinfo
 
 # EconomyIngest SQLite(运行时产物,不入库)
 data/*.db
