@@ -31,9 +31,11 @@ from pathlib import Path
 from typing import Any
 
 from .event_schema import (
+    CATEGORIES,
     CATEGORY_CODES,
     DEFAULT_DB_PATH,
     RELATION_TYPES,
+    TAG_DICTIONARY,
     TAG_SET,
     connect,
     init_schema,
@@ -229,6 +231,88 @@ def list_recent(
 
 
 # ---------------------------------------------------------------------------
+# 统计(8 大类 / 30 tag 词典 / DB 现状)
+# ---------------------------------------------------------------------------
+
+def stats_by_category(*, db_path: str | Path | None = None) -> dict[str, Any]:
+    """统计 8 大类当前条数 + Phase 0 目标缺额 + 30 tag 词典使用频次 + DB 现状。
+
+    返回结构
+    --------
+    {
+        "db_path": "<绝对路径>",
+        "db_size_bytes": <int>,
+        "total_event": <int>,
+        "total_event_tag": <int>,
+        "total_event_relation": <int>,
+        "target_sum": 100,
+        "by_category": [
+            {"category": "policy-monetary", "name_cn": "货币政策",
+             "current": <int>, "target": 12, "gap": <int>},
+            ...
+            # 8 大类全列,按 CATEGORIES 顺序
+        ],
+        "tag_usage": {
+            "词典内已用": <int>, "词典内未用": <int>,
+            "词典外使用": <int>,  # event_tag.tag 不在 TAG_SET 的数量
+            "top10_used": [{"tag": ..., "count": ...}, ...]
+        }
+    }
+    """
+    path = Path(db_path) if db_path else DEFAULT_DB_PATH
+    # DB 体积(文件不存在则 0)
+    db_size = path.stat().st_size if path.exists() else 0
+
+    with connect(path) as conn:
+        total_event = conn.execute("SELECT COUNT(*) AS n FROM event").fetchone()["n"]
+        total_event_tag = conn.execute("SELECT COUNT(*) AS n FROM event_tag").fetchone()["n"]
+        total_event_relation = conn.execute("SELECT COUNT(*) AS n FROM event_relation").fetchone()["n"]
+
+        # 8 大类当前数(LEFT JOIN 保证未用大类也出现,current=0)
+        by_cat: list[dict[str, Any]] = []
+        for code, name_cn, target in CATEGORIES:
+            cur = conn.execute(
+                "SELECT COUNT(*) AS n FROM event WHERE category = ?", (code,)
+            ).fetchone()["n"]
+            by_cat.append({
+                "category": code,
+                "name_cn": name_cn,
+                "current": cur,
+                "target": target,
+                "gap": max(target - cur, 0),
+            })
+
+        # tag 词典使用频次
+        used_rows = conn.execute(
+            """
+            SELECT tag, COUNT(*) AS n FROM event_tag
+            GROUP BY tag ORDER BY n DESC
+            """
+        ).fetchall()
+        used_tags = {r["tag"]: r["n"] for r in used_rows}
+        in_dict_used = sum(n for t, n in used_tags.items() if t in TAG_SET)
+        in_dict_unused = len(TAG_SET) - sum(1 for t in TAG_SET if t in used_tags)
+        out_of_dict = sum(n for t, n in used_tags.items() if t not in TAG_SET)
+        top10 = [{"tag": r["tag"], "count": r["n"]} for r in used_rows[:10]]
+
+    return {
+        "db_path": str(path),
+        "db_size_bytes": db_size,
+        "total_event": total_event,
+        "total_event_tag": total_event_tag,
+        "total_event_relation": total_event_relation,
+        "target_sum": sum(n for _, _, n in CATEGORIES),
+        "by_category": by_cat,
+        "tag_usage": {
+            "in_dict_used": in_dict_used,
+            "in_dict_unused": in_dict_unused,
+            "out_of_dict_count": out_of_dict,
+            "top10_used": top10,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -267,6 +351,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p_init = sub.add_parser("init", help="仅建表(幂等)")
     p_init.add_argument("--db", default=None)
+
+    p_stats = sub.add_parser("stats", help="统计 8 大类进度 + 30 tag 词典使用频次 + DB 现状")
+    p_stats.add_argument("--db", default=None)
 
     return p
 
@@ -326,6 +413,11 @@ def main(argv: list[str] | None = None) -> int:
         for line in ddl_lines:
             print(f"  ✓ {line}")
         print(f"DB: {args.db or DEFAULT_DB_PATH}")
+        return 0
+
+    if args.cmd == "stats":
+        result = stats_by_category(db_path=args.db)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
     return 1

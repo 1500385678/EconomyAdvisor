@@ -1,14 +1,15 @@
-"""self_test_event:事件库 5 步自检。
+"""self_test_event:事件库 6 步自检。
 
 每步必须 PASS,任一 FAIL 立即 raise。退出码:0=PASS / 1=FAIL。
 
-5 步
+6 步
 ----
 T1 DDL 幂等:init_schema() 跑 2 次不报错,3 张表都存在
 T2 单条插入:add_event() 1 条,返回 dict 含新 id
 T3 标签白名单:tag 在 §3.3 词典 → PASS;tag 不在 → EventValidationError
 T4 列表查询:list_recent(limit=2) 返回最近 2 条,按 event_date DESC
 T5 关系录入:add_relation() 事件↔事件 + 事件↔指标 各 1 条,互斥校验
+T6 统计输出:stats_by_category() 返回 8 大类齐全 + 目标 100 + tag_usage 字典齐全
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from backend.event.event_schema import (  # noqa: E402
+    CATEGORIES,
     CATEGORY_CODES,
     CATEGORY_TARGET_SUM,
     DEFAULT_DB_PATH,
@@ -36,6 +38,7 @@ from backend.event.ingest_event import (  # noqa: E402
     add_event,
     add_relation,
     list_recent,
+    stats_by_category,
 )
 
 
@@ -191,8 +194,58 @@ def t5_relation(tmp_db: Path) -> None:
         _fail("应抛 EventValidationError 但没抛")
 
 
+def t6_stats(tmp_db: Path) -> None:
+    print("T6 统计输出")
+    result = stats_by_category(db_path=tmp_db)
+    # 必含 key
+    for key in (
+        "db_path", "db_size_bytes", "total_event", "total_event_tag",
+        "total_event_relation", "target_sum", "by_category", "tag_usage",
+    ):
+        if key not in result:
+            _fail(f"stats 缺 key: {key!r}")
+    # by_category 必须 8 大类齐全 + 顺序按 CATEGORIES
+    if len(result["by_category"]) != len(CATEGORIES):
+        _fail(
+            f"by_category 应含 8 大类={len(CATEGORIES)}, 实际 {len(result['by_category'])}"
+        )
+    for i, (code, name_cn, target) in enumerate(CATEGORIES):
+        row = result["by_category"][i]
+        if row["category"] != code:
+            _fail(f"by_category[{i}].category={row['category']}, 应 {code}")
+        if row["name_cn"] != name_cn:
+            _fail(f"by_category[{i}].name_cn={row['name_cn']}, 应 {name_cn}")
+        if row["target"] != target:
+            _fail(f"by_category[{i}].target={row['target']}, 应 {target}")
+        if "gap" not in row or row["gap"] != max(target - row["current"], 0):
+            _fail(f"by_category[{i}].gap 算错: {row}")
+    # target_sum 必须 = 100
+    if result["target_sum"] != 100:
+        _fail(f"target_sum 应 = 100, 实际 {result['target_sum']}")
+    # tag_usage 字典齐全
+    for key in ("in_dict_used", "in_dict_unused", "out_of_dict_count", "top10_used"):
+        if key not in result["tag_usage"]:
+            _fail(f"tag_usage 缺 key: {key!r}")
+    # T2 + T3 + T5 共 1+1+2 = 4 个 event
+    if result["total_event"] != 4:
+        _fail(
+            f"total_event 应 = 4(T2+T3+T5 各 1+1+2), 实际 {result['total_event']}"
+        )
+    if result["total_event_relation"] != 2:
+        _fail(
+            f"total_event_relation 应 = 2(T5 关系×2), 实际 {result['total_event_relation']}"
+        )
+    # 临时 DB 存在 + size > 0
+    if result["db_size_bytes"] <= 0:
+        _fail(f"db_size_bytes 应 > 0, 实际 {result['db_size_bytes']}")
+    _ok(
+        f"8 大类齐全 + target_sum=100 + 4 event / {result['total_event_tag']} tag / "
+        f"2 relation / {result['db_size_bytes']}B"
+    )
+
+
 def main() -> int:
-    print("=== self_test_event · 5 步自检 ===")
+    print("=== self_test_event · 6 步自检 ===")
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         tmp_db = Path(f.name)
     try:
@@ -201,9 +254,10 @@ def main() -> int:
         t3_tag_whitelist(tmp_db)
         t4_list_recent(tmp_db)
         t5_relation(tmp_db)
+        t6_stats(tmp_db)
     finally:
         tmp_db.unlink(missing_ok=True)
-    print("=== 5/5 PASS ===")
+    print("=== 6/6 PASS ===")
     return 0
 
 
