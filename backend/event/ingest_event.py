@@ -2,7 +2,7 @@
 
 用法
 ----
-单条录入(交互式):
+模块化(推荐):
     python3 -m backend.event.ingest_event add \\
         --date 2024-09-24 \\
         --category policy-monetary \\
@@ -10,6 +10,10 @@
         --summary "中国人民银行决定下调金融机构存款准备金率 0.5pct,7 天逆回购利率下调 20bp" \\
         --source "央行" --url "http://www.pbc.gov.cn/" \\
         --tags "降准 降息 逆回购"
+
+脚本式(亦支持,自动 fallback 到绝对导入):
+    python3 backend/event/ingest_event.py stats
+    python3 backend/event/ingest_event.py list --limit 5
 
 单条录入(从 JSON):
     python3 -m backend.event.ingest_event add-json --file one_event.json
@@ -30,17 +34,36 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from .event_schema import (
-    CATEGORIES,
-    CATEGORY_CODES,
-    DEFAULT_DB_PATH,
-    RELATION_TYPES,
-    TAG_DICTIONARY,
-    TAG_SET,
-    connect,
-    init_schema,
-    now_iso,
-)
+# 相对导入失败时(脚本式运行 `python3 backend/event/ingest_event.py ...`),
+# fallback 到绝对导入(临时把 backend/ 加进 sys.path)。这样两种调用方式都 OK。
+try:
+    from .event_schema import (  # type: ignore[relative-beyond-top-level]
+        CATEGORIES,
+        CATEGORY_CODES,
+        DEFAULT_DB_PATH,
+        RELATION_TYPES,
+        TAG_DICTIONARY,
+        TAG_SET,
+        connect,
+        init_schema,
+        now_iso,
+    )
+except ImportError:
+    _HERE = Path(__file__).resolve().parent
+    _BACKEND = _HERE.parent
+    if str(_BACKEND) not in sys.path:
+        sys.path.insert(0, str(_BACKEND))
+    from event.event_schema import (  # type: ignore[no-redef]
+        CATEGORIES,
+        CATEGORY_CODES,
+        DEFAULT_DB_PATH,
+        RELATION_TYPES,
+        TAG_DICTIONARY,
+        TAG_SET,
+        connect,
+        init_schema,
+        now_iso,
+    )
 
 
 # ---------------------------------------------------------------------------
