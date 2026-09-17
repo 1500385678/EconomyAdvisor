@@ -1,6 +1,7 @@
 # EconomyAdvisor
 
 > 20-经济-Economy 行业 Web 项目 · 内部代号 EconomyAdvisor
+> 最近更新:2026-09-18(v0.9 · 同步 backend/event/ 子包 + docs/phase-0-* 6 文档归位)
 
 ## 项目说明
 基于张勇的 36 行业架构,EconomyAdvisor 是 经济-Economy 行业的 Web 端顾问产品。
@@ -20,14 +21,20 @@
 ## 项目结构
 ```
 EconomyWeb/
-├── README.md                 # 本文件
+├── README.md                 # 本文件(v0.9 · 2026-09-18 同步)
 ├── 项目开发计划.md            # Phase 0-3 主计划
 ├── 经济顾问开发架构与计划.md    # 完整产品立项 + 技术方案 v1.0
 ├── backend/
-│   └── ingest/                # §5-2 宏观数据接入层(2026-08-26 起步)
-│       ├── economy_ingest.py              # SQLite schema + 5 指标数据契约
-│       ├── probe_akshare_5indicators.py   # probe CLI(akshare 不可用时 mock 落库)
-│       └── README.md                      # 使用说明 + 后续 §5-2 Day 1-5 任务分解
+│   ├── ingest/                # §5-2 宏观数据接入层(2026-08-26 起步)
+│   │   ├── economy_ingest.py              # SQLite schema + 5 指标数据契约
+│   │   ├── probe_akshare_5indicators.py   # probe CLI(akshare 不可用时 mock 落库)
+│   │   └── README.md                      # 使用说明 + 后续 §5-2 Day 1-5 任务分解
+│   └── event/                 # §5-5 事件库 CLI 子包(2026-09-04 起步 · 2026-09-15 升脚本式兼容)
+│       ├── __init__.py                    # 子包标识
+│       ├── event_schema.py                # 8 大类 + 30 tag 词典 + 4 关系类型 + DDL
+│       ├── ingest_event.py                # add / add-json / batch / list / init / stats 6 子命令
+│       ├── self_test_event.py             # 6 步自检(T6 stats)
+│       └── README.md                      # 使用说明 + CLI 示例
 ├── frontend/                  # §5-2 Day 4 · Phase 1 MVP 启动基线 v2(2026-08-28)
 │   ├── app/                                # Next.js 14 App Router(1 主页 + 1 API)
 │   │   ├── page.tsx
@@ -37,10 +44,15 @@ EconomyWeb/
 │   ├── lib/db.ts                           # better-sqlite3 单例 + 指标卡片数据接口
 │   ├── package.json / tsconfig.json / next.config.js / .gitignore
 │   └── README.md                           # 使用说明 + 与 backend/ingest 接口契约
-├── docs/                      # 阶段性调研文档
-│   └── phase-0-data-source-catalog-v0.1.md
-├── .plan/                     # 每日 dev plan(消费后清理)
-├── Logs/                      # 每日巡检报告
+├── docs/                      # 阶段性调研文档(Phase 0 已 6 文档归位)
+│   ├── phase-0-data-source-catalog-v0.1.md    # §5-2 5 大免费宏观源调研(2026-08-30)
+│   ├── phase-0-attribution-schema-v0.1.md    # §5-3 归因输出标准 schema(2026-08-31)
+│   ├── phase-0-wind-compliance-memo-v0.1.md  # §5-2 Wind/iFinD/同花顺 API 合规边界(2026-09-01)
+│   ├── phase-0-event-library-design-v0.1.md  # §5-5 事件库 v0.1 设计(2026-09-03)
+│   ├── phase-0-policies-corpus-v0.1.md       # §5-3 政策语料库 v0.1+ → v0.8(累计 25/50 条 POL,2026-09-17)
+│   └── phase-0-real-estate-new-mode-history-v0.1.md  # §5-3 地产新模式"前史"对照表(2026-09-06)
+├── .plan/                     # 每日 dev plan(T4 调度生成 · T5 消费后清理;*.DS_Store 已 gitignore)
+├── Logs/                      # 每日巡检报告(T3 写入)
 └── data/                      # EconomyIngest SQLite 落库(运行时产物,不入 git)
 ```
 
